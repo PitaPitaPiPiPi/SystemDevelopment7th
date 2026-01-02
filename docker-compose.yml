@@ -1,44 +1,37 @@
 version: "3.8"
 
 services:
-  # Traefik Reverse Proxy
   traefik:
     image: traefik:v2.10
     command:
       - "--api.insecure=true"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.file.filename=/etc/traefik/dynamic.yml"
       - "--entrypoints.web.address=:80"
     ports:
       - "80:80"
       - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik-dynamic.yml:/etc/traefik/dynamic.yml:ro
 
-  # Stable version (v1) - 90% of traffic
   app-stable:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     environment:
       - VERSION=1.0.0
-      - BG_COLOR=#3498db
       - STATUS=STABLE
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.app-stable.loadbalancer.server.port=8080"
+      - "traefik.http.routers.app.rule=PathPrefix(`/`)"
+      - "traefik.http.services.app.loadbalancer.server.port=8080"
+      - "traefik.http.services.app.loadbalancer.weight=90"
 
-  # Canary version (v2) - 10% of traffic
   app-canary:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     environment:
       - VERSION=2.0.0
-      - BG_COLOR=#e74c3c
       - STATUS=CANARY
     labels:
       - "traefik.enable=true"
-      - "traefik.http.services.app-canary.loadbalancer.server.port=8080"
+      - "traefik.http.routers.app.rule=PathPrefix(`/`)"
+      - "traefik.http.services.app.loadbalancer.server.port=8080"
+      - "traefik.http.services.app.loadbalancer.weight=10"
